@@ -1,6 +1,6 @@
 <script setup>
 import GIF from "gif.js";
-import {decompressFrames, parseGIF} from "gifuct-js";
+import {decompressFrames, parseGIF,GIFEncoder} from "gifuct-js";
 import {ref, watch} from "vue";
 
 const scale = ref(1);
@@ -8,11 +8,15 @@ const imgUint8Array = ref(null);
 const picsList = ref([]);
 const file = ref(null);
 const imgURL = ref(null);
-const result = ref(false);
+
 const fileType = ref(null);
 const finishedGif = ref(null);
 const uploadImg = ref(null);
+const showImages = ref(true); // 初始状态为显示图片
 
+const toggleImages = () => {
+  showImages.value = !showImages.value;
+};
 const handleFileUpload = (event) => {
   fileType.value = event.target.files[0].type;
   if(fileType.value !== 'image/gif') {
@@ -85,13 +89,18 @@ const startRendering = (img) => {
     const scaleRatio = scale.value; // 缩放比例为0.5
     scaledCanvas.width = canvas.width * scaleRatio;
     scaledCanvas.height = canvas.height * scaleRatio;
-    const scaledContext = scaledCanvas.getContext("2d");
+
+    const scaledContext = scaledCanvas.getContext("2d",{alpha: true});
+// 设置画布背景为白色
+    scaledContext.fillStyle = "#ffffff"; // 白色
+    scaledContext.fillRect(0, 0, scaledCanvas.width, scaledCanvas.height);
+
     scaledContext.drawImage(
         canvas,
         0,
         0,
         scaledCanvas.width,
-        scaledCanvas.height
+        scaledCanvas.height,
     );
 
     const image = new Image();
@@ -109,18 +118,15 @@ const startRendering = (img) => {
 const transToGif = (piclist) => {
   return new Promise((resolve, reject) => {
     const gif = new GIF({
-      workers: 4,
-      quality: 1,
-      transparent:'#fff' //这个在背景图片是透明时会用到
+      workers: 2,
+      quality: 2,
     });
 
     for (let i = 0; i < piclist.length; i++) {
-      gif.addFrame(piclist[i], {delay: 100});
+      gif.addFrame(piclist[i], {copy: true, delay: 100});
     }
 
     gif.on("finished", function (blob) {
-      // const img = document.createElement("img");
-      // img.src = URL.createObjectURL(blob);
       resolve(blob);
     });
 
@@ -153,7 +159,11 @@ const mountFile = () => {
     <img  ref="uploadImg" id="uploadImg" :src="imgURL" :style="{ transform: `scale(${scale})` }"  alt="" />
     <input type="range" v-model="scale" min="0" max="1" step="0.1">
     <button @click="mountFile">开始渲染</button>
+    <button @click="toggleImages">{{ showImages ? '隐藏所有帧' : '显示所有帧' }}</button>
 
+    <div class="pic-container" v-if="showImages">
+      <img v-for="(pic, index) in picsList" :key="index" :src="pic.src" :style="{ transform: `scale(${scale})` }" />
+    </div>
 
   </div>
 </template>
@@ -169,5 +179,15 @@ const mountFile = () => {
 }
 #uploadImg{
   max-width: 100vw;
+}
+
+.pic-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pic-container img {
+  margin: 10px;
 }
 </style>
