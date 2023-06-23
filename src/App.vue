@@ -109,8 +109,9 @@ const startRendering = (img) => {
 const transToGif = (piclist) => {
   return new Promise((resolve, reject) => {
     const gif = new GIF({
-      workers: 2,
-      quality: 2,
+      workers: 4,
+      quality: 1,
+      transparent:'#fff' //这个在背景图片是透明时会用到
     });
 
     for (let i = 0; i < piclist.length; i++) {
